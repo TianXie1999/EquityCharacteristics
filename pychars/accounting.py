@@ -5,7 +5,6 @@ import wrds
 from dateutil.relativedelta import *
 from pandas.tseries.offsets import *
 import pickle as pkl
-
 ###################
 # Connect to WRDS #
 ###################
@@ -72,7 +71,7 @@ comp = conn.raw_sql("""
                     f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex,
                     
                     /*market*/
-                    abs(f.prcc_f) as prcc_f
+                    abs(f.prcc_f) as prcc_f, abs(f.prcc_c) as prcc_c
                     
                     from comp.funda as f
                     left join comp.company as c
@@ -210,7 +209,7 @@ ccm['linkenddt'] = ccm['linkenddt'].fillna(pd.to_datetime('today'))
 ccm1 = pd.merge(comp, ccm, how='left', on=['gvkey'])
 
 # we can only get the accounting data after the firm public their report
-# for annual data, we ues 6 months lagged data
+# for annual data, we use 6 months lagged data
 ccm1['yearend'] = ccm1['datadate'] + YearEnd(0)
 ccm1['jdate'] = ccm1['yearend'] + MonthEnd(6)
 
@@ -218,6 +217,7 @@ ccm1['jdate'] = ccm1['yearend'] + MonthEnd(6)
 ccm2 = ccm1[(ccm1['jdate'] >= ccm1['linkdt']) & (ccm1['jdate'] <= ccm1['linkenddt'])]
 
 # link comp and crsp
+# data_rawa only includes annul data because comp is annual. Use inner merge
 crsp2 = crsp2.rename(columns={'monthend': 'jdate'})
 data_rawa = pd.merge(crsp2, ccm2, how='inner', on=['permno', 'jdate'])
 
@@ -229,8 +229,8 @@ data_rawa = data_rawa[((data_rawa['exchcd'] == 1) | (data_rawa['exchcd'] == 2) |
 '''
 Note: me is CRSP market equity, mve_f is Compustat market equity. Please choose the me below.
 '''
-# data_rawa['me'] = data_rawa['me']/1000  # CRSP ME
-data_rawa['me'] = data_rawa['mve_f']  # Compustat ME
+data_rawa['me'] = data_rawa['me']/1000  # CRSP ME
+#data_rawa['me'] = data_rawa['mve_f']  # Compustat ME
 
 # update count after merging
 # data_rawa['count'] = data_rawa.groupby(['gvkey']).cumcount() + 1
@@ -289,9 +289,47 @@ choicelist = [data_rawa['ib'],
               np.nan]
 data_rawa['cfp_n'] = np.select(condlist, choicelist, default=data_rawa['ib']+data_rawa['dp'])
 
-# ep
+# ep, checked from Hou and change 'ME' from compustat to crsp
 data_rawa['ep'] = data_rawa['ib']/data_rawa['me']
 data_rawa['ep_n'] = data_rawa['ib']
+
+#ir
+'''
+First calculate r(t-5,t). Then rb(t-5,t) and use Bm to perform linear regression and get residue
+'''
+#r(t-5,t):sum ret from t-5 to t (which is calendar year t-6 to t-1)
+lag = pd.DataFrame()
+for i in range(1,6):
+        lag['ret%s' % i] = data_rawa.groupby(['permno'])['ret'].shift(i)
+        log_ps['ps%s'% i] = 
+data_rawa['ret5'] = lag['ret1']+lag['ret2']+lag['ret3']+lag['ret4']+lag['ret5']
+
+#bm_t-5 (bm of year t-5)
+data_rawa['bm5'] = data_rawa.groupby(['permno'])['bm'].shift(5)
+
+#rB (five year log book return)
+#Reference: jf_06 page8 by KENT DANIEL
+data_rawa['rB'] = data_rawa['bm'] - data_rawa['bm5'] + data_rawa['ret5']
+
+#Regression and get ir
+#First get unique datelist
+datelist = data_rawa['jdate'].unique()
+for date in datelist:
+    temp = data_rawa['jdate' == date]
+    n_row = temp.shape[0]
+    index = temp.index
+    X = pd.DataFrame()
+    X['bm5'] = temp['bm5']
+    X['rB'] = temp['rB']
+    X['intercept'] = 1
+    X = X[['intercept','rB','bm5']]
+    X = np.mat(X)
+    Y = np.mat(temp[['ret5']])
+    #These are residuals on one date
+    res = (np.identity(n_row) - X.dot(X.T.dot(X).I).dot(X.T)).dot(Y)
+    #put residuals back into data_rawa
+    data_rawa.loc[index,'ir'] = res
+
 
 # ni
 data_rawa['csho_l1'] = data_rawa.groupby(['permno'])['csho'].shift(1)
@@ -524,8 +562,8 @@ data_rawq = data_rawq[((data_rawq['exchcd'] == 1) | (data_rawq['exchcd'] == 2) |
 '''
 Note: me is CRSP market equity, mveq_f is Compustat market equity. Please choose the me below.
 '''
-# data_rawq['me'] = data_rawq['me']/1000  # CRSP ME
-data_rawq['me'] = data_rawq['mveq_f']  # Compustat ME
+data_rawq['me'] = data_rawq['me']/1000  # CRSP ME
+#data_rawq['me'] = data_rawq['mveq_f']  # Compustat ME
 
 # update count after merging
 # data_rawq['count'] = data_rawq.groupby(['gvkey']).cumcount() + 1
@@ -594,7 +632,7 @@ data_rawq['cfp'] = np.where(data_rawq['dpq'].isnull(),
                           (ttm4('ibq', data_rawq)+ttm4('dpq', data_rawq))/data_rawq['me'])
 data_rawq['cfp_n'] = data_rawq['cfp']*data_rawq['me']
 
-# ep
+# ep, also checked and change 'ME' from compustat to crsp
 data_rawq['ep'] = ttm4('ibq', data_rawq)/data_rawq['me']
 data_rawq['ep_n'] = data_rawq['ep']*data_rawq['me']
 
