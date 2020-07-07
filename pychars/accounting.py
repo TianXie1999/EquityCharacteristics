@@ -71,7 +71,7 @@ comp = conn.raw_sql("""
                     f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex,
                     
                     /*market*/
-                    abs(f.prcc_f) as prcc_f, abs(f.prcc_c) as prcc_c
+                    abs(f.prcc_f) as prcc_f, abs(f.prcc_c) as prcc_c, f.dvc, f.prstkc, f.sstk, f.fopt, f.wcap, f.oancf
                     
                     from comp.funda as f
                     left join comp.company as c
@@ -339,7 +339,7 @@ data_rawa['ni'] = np.where(data_rawa['gvkey'] != data_rawa['gvkey'].shift(1),
                            np.log(data_rawa['csho']*data_rawa['ajex']).replace(-np.inf, 0)-
                            np.log(data_rawa['csho_l1']*data_rawa['ajex_l1']).replace(-np.inf, 0))
 
-# op
+# op: the formula seems different from Hou Page 74?
 data_rawa['cogs0'] = np.where(data_rawa['cogs'].isnull(), 0, data_rawa['cogs'])
 data_rawa['xint0'] = np.where(data_rawa['xint'].isnull(), 0, data_rawa['xint'])
 data_rawa['xsga0'] = np.where(data_rawa['xsga'].isnull(), 0, data_rawa['xsga'])
@@ -348,6 +348,18 @@ condlist = [data_rawa['revt'].isnull(), data_rawa['be'].isnull()]
 choicelist = [np.nan, np.nan]
 data_rawa['op'] = np.select(condlist, choicelist,
                           default=(data_rawa['revt'] - data_rawa['cogs0'] - data_rawa['xsga0'] - data_rawa['xint0'])/data_rawa['be'])
+
+#nop
+data_rawa['net_p'] = data_rawa['dvc'] + data_rawa['prstkc'] + 2*data_rawa['pstkrv'] - data_rawa['sstk']
+data_rawa['nop'] = data_rawa['net_p'] / data_rawa['me']
+data_rawa['nop'] = np.where(data_rawa['nop']<=0, nan, data_rawa['nop'] )
+
+#ocp
+data_rawa['ocy'] = np.where(data_rawa['jdate'] < '1988-06-30', data_rawa['fopt'] - data_rawa['wcap'], data_rawa['fopt'] - data_rawa['oancf'])
+data_rawa['ocp'] = data_rawa['ocy'] / data_rawa['me']
+data_rawa['ocp'] = np.where(data_rawa['ocp']<=0, nan, data_rawa['ocp'] )
+
+
 
 # rsup
 data_rawa['sale_l1'] = data_rawa.groupby(['permno'])['sale'].shift(1)
@@ -363,7 +375,7 @@ data_rawa['cash'] = data_rawa['che']/data_rawa['at']
 # lev
 data_rawa['lev'] = data_rawa['lt']/data_rawa['me']
 
-# sp
+# sp, checked
 data_rawa['sp'] = data_rawa['sale']/data_rawa['me']
 data_rawa['sp_n'] = data_rawa['sale']
 
