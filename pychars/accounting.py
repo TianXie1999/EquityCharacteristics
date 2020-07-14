@@ -270,7 +270,7 @@ choicelist = [data_rawa['ib'],
               np.nan]
 data_rawa['cfp_n'] = np.select(condlist, choicelist, default=data_rawa['ib']+data_rawa['dp'])
 
-# ep, checked from Hou and change 'ME' from compustat to crsp
+# ep, checked from Hou and change 'ME' from compustat to crsp，checked
 data_rawa['ep'] = data_rawa['ib']/data_rawa['me']
 data_rawa['ep_n'] = data_rawa['ib']
 
@@ -339,8 +339,6 @@ data_rawa['nop'] = np.where(data_rawa['nop']<=0, nan, data_rawa['nop'] )
 data_rawa['ocy'] = np.where(data_rawa['jdate'] < '1988-06-30', data_rawa['fopt'] - data_rawa['wcap'], data_rawa['fopt'] - data_rawa['oancf'])
 data_rawa['ocp'] = data_rawa['ocy'] / data_rawa['me']
 data_rawa['ocp'] = np.where(data_rawa['ocp']<=0, nan, data_rawa['ocp'] )
-
-
 
 # rsup
 data_rawa['sale_l1'] = data_rawa.groupby(['permno'])['sale'].shift(1)
