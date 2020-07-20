@@ -282,7 +282,7 @@ First calculate r(t-5,t). Then rb(t-5,t) and use Bm to perform linear regression
 lag = pd.DataFrame()
 for i in range(1,6):
         lag['ret%s' % i] = data_rawa.groupby(['permno'])['ret'].shift(i)
-        log_ps['ps%s'% i] = 
+
 data_rawa['ret5'] = lag['ret1']+lag['ret2']+lag['ret3']+lag['ret4']+lag['ret5']
 
 #bm_t-5 (bm of year t-5)
@@ -480,6 +480,16 @@ data_rawa['roa'] = data_rawa['ni']/((data_rawa['at']+data_rawa['at_l1'])/2)
 
 # dy
 data_rawa['dy'] = data_rawa['dvt']/data_rawa['me']
+
+#aci
+data_rawa['capx_s'] = data_rawa['capx']/data_rawa['sale']
+data_rawa['capx_3'] = data_rawa.groupby('permno')['capx_s'].shift(1)+data_rawa.groupby('permno')['capx_s'].shift(2)+data_rawa.groupby('permno')['capx_s'].shift(3)
+data_rawa['capx_3'] = data_rawa['capx_3']/3
+data_rawa['aci'] = data_rawa['capx_s']/data_rawa['capx_3']
+
+#cei
+data_rawa['me_5'] = data_rawa.groupby('permno')['me'].shift(5)
+data_rawa['cei'] = np.log(data_rawa['me']/data_rawa['me_5']) - data_rawa['ret5']
 
 # Annual Accounting Variables
 chars_a = data_rawa[['cusip', 'ncusip', 'gvkey', 'permno', 'exchcd', 'shrcd', 'datadate', 'jdate', 'count',
