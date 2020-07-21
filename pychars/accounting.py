@@ -491,6 +491,12 @@ data_rawa['aci'] = data_rawa['capx_s']/data_rawa['capx_3']
 data_rawa['me_5'] = data_rawa.groupby('permno')['me'].shift(5)
 data_rawa['cei'] = np.log(data_rawa['me']/data_rawa['me_5']) - data_rawa['ret5']
 
+#dwc
+data_rawa['dwc'] = (data_rawa['act'] - data_rawa['che']) - (data_rawa['lct'] - data_rawa['dlc'])
+
+#I/A
+data_rawa['ia'] = (data_rawa['at']/data_rawa['at_l1'])-1
+
 # Annual Accounting Variables
 chars_a = data_rawa[['cusip', 'ncusip', 'gvkey', 'permno', 'exchcd', 'shrcd', 'datadate', 'jdate', 'count',
                      'sic', 'acc', 'agr', 'bm', 'cfp', 'ep', 'ni', 'op', 'rsup', 'cash', 'chcsho',
