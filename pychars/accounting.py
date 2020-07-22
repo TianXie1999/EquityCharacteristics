@@ -778,6 +778,12 @@ data_rawq['pm'] = data_rawq['oiadpq']/data_rawq['saleq']
 # ato
 data_rawq['ato'] = data_rawq['saleq']/data_rawq['noa_l4']
 
+#Iaq
+data_rawq['atqlag'] = ttm4('atq',data_rawq)
+data_rawq['iaq'] = (data_rawq['atq']/data_rawq['atqlag'])-1
+
+
+
 # Quarterly Accounting Variables
 chars_q = data_rawq[['gvkey', 'permno', 'datadate', 'jdate', 'sic', 'exchcd', 'shrcd', 'acc', 'bm', 'cfp',
                      'ep', 'agr', 'ni', 'op', 'cash', 'chcsho', 'rd', 'cashdebt', 'pctacc', 'gma', 'lev',
@@ -882,3 +888,5 @@ with open('chars_a.pkl', 'wb') as f:
 
 with open('chars_q.pkl', 'wb') as f:
     pkl.dump(chars_q, f)
+
+
