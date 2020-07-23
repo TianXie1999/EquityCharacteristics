@@ -419,7 +419,7 @@ data_rawa['chtx'] = (data_rawa['txt']-data_rawa['txt_l1'])/data_rawa['at_l1']
 # alm
 # data_rawa['alm'] = data_rawa['ala']/(data_rawa['at']+data_rawa['prcc_f']*data_rawa['csho']-data_rawa['ceq'])
 
-# noa
+# noa,checked
 data_rawa['noa'] = ((data_rawa['at']-data_rawa['che']-data_rawa['ivao'].fillna(0))-
                   (data_rawa['at']-data_rawa['dlc'].fillna(0)-data_rawa['dltt'].fillna(0)-data_rawa['mib'].fillna(0)
                    -data_rawa['pstk'].fillna(0)-data_rawa['ceq'])/data_rawa['at_l1'])
@@ -511,6 +511,12 @@ data_rawa['ivc'] = data_rawa['invt'] / data_rawa['atAvg']
 
 #Ndf
 data_rawa['ndf'] = data_rawa['dltis'] - data_rawa['dltr'] + data_rawa['dlcch'] 
+
+#nsi
+data_rawa['sps'] = data_rawa['csho'] * data_rawa['ajex']
+data_rawa['sps_l1'] = data_rawa.groupby('permno')['sps'].shift(1)
+data_rawa['nsi'] = np.log(data_rawa['sps']/data_rawa['sps_l1'])
+
 
 # Annual Accounting Variables
 chars_a = data_rawa[['cusip', 'ncusip', 'gvkey', 'permno', 'exchcd', 'shrcd', 'datadate', 'jdate', 'count',
