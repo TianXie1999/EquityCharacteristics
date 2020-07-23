@@ -65,7 +65,7 @@ comp = conn.raw_sql("""
                     
                     /*liabilities*/
                     f.lct, f.dlc, f.dltt, f.lt, f.dm, f.dcvt, f.cshrc, 
-                    f.dcpstk, f.pstk, f.ap, f.lco, f.lo, f.drc, f.drlt, f.txdi,
+                    f.dcpstk, f.pstk, f.ap, f.lco, f.lo, f.drc, f.drlt, f.txdi, f.dltis, f.dltr. f.dlcch
                     
                     /*equity and other*/
                     f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex,
@@ -496,6 +496,21 @@ data_rawa['dwc'] = (data_rawa['act'] - data_rawa['che']) - (data_rawa['lct'] - d
 
 #I/A
 data_rawa['ia'] = (data_rawa['at']/data_rawa['at_l1'])-1
+
+#Ig
+data_rawa['capx_l1'] = data_rawa.groupby('permno')['capx'].shift(1)
+data_rawa['ig'] = data_rawa['capx']/data_rawa['capx_l1']
+
+#2Ig
+data_rawa['capx_l2'] = data_rawa.groupby('permno')['capx'].shift(2)
+data_rawa['ig'] = data_rawa['capx']/data_rawa['capx_l2']
+
+#Ivc
+data_rawa['atAvg'] = (data_rawa['at']+data_rawa['at_l1'])/2
+data_rawa['ivc'] = data_rawa['invt'] / data_rawa['atAvg']
+
+#Ndf
+data_rawa['ndf'] = data_rawa['dltis'] - data_rawa['dltr'] + data_rawa['dlcch'] 
 
 # Annual Accounting Variables
 chars_a = data_rawa[['cusip', 'ncusip', 'gvkey', 'permno', 'exchcd', 'shrcd', 'datadate', 'jdate', 'count',
