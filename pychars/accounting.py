@@ -58,7 +58,7 @@ comp = conn.raw_sql("""
                     f.ebit, f.nopi, f.spi, f.pi, f.txp, f.ni, f.txfed, f.txfo, f.txt, f.xint,
                     
                     /*CF statement and others*/
-                    f.capx, f.oancf, f.dvt, f.ob, f.gdwlia, f.gdwlip, f.gwo, f.mib, f.oiadp, f.ivao,
+                    f.capx, f.oancf, f.dvt, f.ob, f.gdwlia, f.gdwlip, f.gwo, f.mib, f.oiadp, f.ivao, f.ivst
                     
                     /*assets*/
                     f.rect, f.act, f.che, f.ppegt, f.invt, f.at, f.aco, f.intan, f.ao, f.ppent, f.gdwl, f.fatb, f.fatl,
@@ -493,6 +493,7 @@ data_rawa['cei'] = np.log(data_rawa['me']/data_rawa['me_5']) - data_rawa['ret5']
 
 #dwc
 data_rawa['dwc'] = (data_rawa['act'] - data_rawa['che']) - (data_rawa['lct'] - data_rawa['dlc'])
+#data_rawa['dwc'] = data_rawa['dwc']/data_rawa['at_l1']
 
 #I/A
 data_rawa['ia'] = (data_rawa['at']/data_rawa['at_l1'])-1
@@ -516,6 +517,27 @@ data_rawa['ndf'] = data_rawa['dltis'] - data_rawa['dltr'] + data_rawa['dlcch']
 data_rawa['sps'] = data_rawa['csho'] * data_rawa['ajex']
 data_rawa['sps_l1'] = data_rawa.groupby('permno')['sps'].shift(1)
 data_rawa['nsi'] = np.log(data_rawa['sps']/data_rawa['sps_l1'])
+
+#oa
+data_rawa['txp'] = np.where(data_rawa['txp'].isnull(), 0, data_rawa['txp'])
+data_rawa['oa'] = (data_rawa['act'] - data_rawa['che']) - (data-rawa['lct'] - data_rawa['dlc'] - data_rawa['txp']) - data_rawa['dp']
+
+#Poa
+data_rawa['poa'] = data_rawa['oa']/data_rawa['ni']
+
+#dNco
+data_rawa['lct'] = np.where(data_rawa['lct'].isnull(), 0, data_rawa['lct'])
+data_rawa['dltt'] = np.where(data_rawa['dltt'].isnull(), 0, data_rawa['dltt'])
+data_rawa['ivao'] = np.where(data_rawa['ivao'].isnull(), 0, data_rawa['ivao'])
+data_rawa['ivst'] = np.where(data_rawa['ivst'].isnull(), 0, data_rawa['ivst'])
+data_rawa['pstk'] = np.where(data_rawa['pstk'].isnull(), 0, data_rawa['pstk'])
+data_rawa['dnco'] = (data_rawa['at'] - data_rawa['ivao']) - (data_rawa['lt'] - data_rawa['dltt'])
+
+#dFin
+data_rawa['dfin'] = (data_rawa['ivst'] + data_rawa['ivao']) - (data_rawa['dltt'] + data_rawa['dlc'] + data_rawa['pstk'])
+
+#Ta
+data_rawa['ta'] = data_rawa['dwc'] + data_rawa['dnco'] + data_rawa['dfin']
 
 
 # Annual Accounting Variables
