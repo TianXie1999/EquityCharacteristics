@@ -58,14 +58,14 @@ comp = conn.raw_sql("""
                     f.ebit, f.nopi, f.spi, f.pi, f.txp, f.ni, f.txfed, f.txfo, f.txt, f.xint,
                     
                     /*CF statement and others*/
-                    f.capx, f.oancf, f.dvt, f.ob, f.gdwlia, f.gdwlip, f.gwo, f.mib, f.oiadp, f.ivao, f.ivst
+                    f.capx, f.oancf, f.dvt, f.ob, f.gdwlia, f.gdwlip, f.gwo, f.mib, f.oiadp, f.ivao, f.ivst,
                     
                     /*assets*/
                     f.rect, f.act, f.che, f.ppegt, f.invt, f.at, f.aco, f.intan, f.ao, f.ppent, f.gdwl, f.fatb, f.fatl,
                     
                     /*liabilities*/
                     f.lct, f.dlc, f.dltt, f.lt, f.dm, f.dcvt, f.cshrc, 
-                    f.dcpstk, f.pstk, f.ap, f.lco, f.lo, f.drc, f.drlt, f.txdi, f.dltis, f.dltr. f.dlcch
+                    f.dcpstk, f.pstk, f.ap, f.lco, f.lo, f.drc, f.drlt, f.txdi, f.dltis, f.dltr, f.dlcch,
                     
                     /*equity and other*/
                     f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex,
@@ -333,12 +333,12 @@ data_rawa['op'] = np.select(condlist, choicelist,
 #nop
 data_rawa['net_p'] = data_rawa['dvc'] + data_rawa['prstkc'] + 2*data_rawa['pstkrv'] - data_rawa['sstk']
 data_rawa['nop'] = data_rawa['net_p'] / data_rawa['me']
-data_rawa['nop'] = np.where(data_rawa['nop']<=0, nan, data_rawa['nop'] )
+data_rawa['nop'] = np.where(data_rawa['nop']<=0, np.nan, data_rawa['nop'] )
 
 #ocp
 data_rawa['ocy'] = np.where(data_rawa['jdate'] < '1988-06-30', data_rawa['fopt'] - data_rawa['wcap'], data_rawa['fopt'] - data_rawa['oancf'])
 data_rawa['ocp'] = data_rawa['ocy'] / data_rawa['me']
-data_rawa['ocp'] = np.where(data_rawa['ocp']<=0, nan, data_rawa['ocp'] )
+data_rawa['ocp'] = np.where(data_rawa['ocp']<=0, np.nan, data_rawa['ocp'] )
 
 # rsup
 data_rawa['sale_l1'] = data_rawa.groupby(['permno'])['sale'].shift(1)
@@ -483,9 +483,9 @@ data_rawa['dy'] = data_rawa['dvt']/data_rawa['me']
 
 #aci
 data_rawa['capx_s'] = data_rawa['capx']/data_rawa['sale']
-data_rawa['capx_3'] = data_rawa.groupby('permno')['capx_s'].shift(1)+data_rawa.groupby('permno')['capx_s'].shift(2)+data_rawa.groupby('permno')['capx_s'].shift(3)
-data_rawa['capx_3'] = data_rawa['capx_3']/3
-data_rawa['aci'] = data_rawa['capx_s']/data_rawa['capx_3']
+data_rawa['capx3'] = data_rawa.groupby(['permno'])['capx_s'].shift(1) + data_rawa.groupby(['permno'])['capx_s'].shift(2) + data_rawa.groupby(['permno'])['capx_s'].shift(3)
+data_rawa['capx3'] = data_rawa['capx3']/3
+data_rawa['aci'] = data_rawa['capx_s']/data_rawa['capx3']
 
 #cei
 data_rawa['me_5'] = data_rawa.groupby('permno')['me'].shift(5)
@@ -504,7 +504,7 @@ data_rawa['ig'] = data_rawa['capx']/data_rawa['capx_l1']
 
 #2Ig
 data_rawa['capx_l2'] = data_rawa.groupby('permno')['capx'].shift(2)
-data_rawa['ig'] = data_rawa['capx']/data_rawa['capx_l2']
+data_rawa['2ig'] = data_rawa['capx']/data_rawa['capx_l2']
 
 #Ivc
 data_rawa['atAvg'] = (data_rawa['at']+data_rawa['at_l1'])/2
@@ -520,7 +520,7 @@ data_rawa['nsi'] = np.log(data_rawa['sps']/data_rawa['sps_l1'])
 
 #oa
 data_rawa['txp'] = np.where(data_rawa['txp'].isnull(), 0, data_rawa['txp'])
-data_rawa['oa'] = (data_rawa['act'] - data_rawa['che']) - (data-rawa['lct'] - data_rawa['dlc'] - data_rawa['txp']) - data_rawa['dp']
+data_rawa['oa'] = (data_rawa['act'] - data_rawa['che']) - (data_rawa['lct'] - data_rawa['dlc'] - data_rawa['txp']) - data_rawa['dp']
 
 #Poa
 data_rawa['poa'] = data_rawa['oa']/data_rawa['ni']
