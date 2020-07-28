@@ -364,7 +364,7 @@ data_rawa['rd_sale'] = data_rawa['xrd']/data_rawa['sale']
 # rdm
 data_rawa['rdm'] = data_rawa['xrd']/data_rawa['me']
 
-# adm hxz adm
+# adm hxz adm, checked
 data_rawa['adm'] = data_rawa['xad']/data_rawa['me']
 
 # gma
@@ -538,6 +538,7 @@ data_rawa['dfin'] = (data_rawa['ivst'] + data_rawa['ivao']) - (data_rawa['dltt']
 
 #Ta
 data_rawa['ta'] = data_rawa['dwc'] + data_rawa['dnco'] + data_rawa['dfin']
+
 
 
 # Annual Accounting Variables
@@ -825,7 +826,12 @@ data_rawq['ato'] = data_rawq['saleq']/data_rawq['noa_l4']
 data_rawq['atqlag'] = ttm4('atq',data_rawq)
 data_rawq['iaq'] = (data_rawq['atq']/data_rawq['atqlag'])-1
 
-
+#Almq
+data_rawq['intanq'] = np.where(data_rawq['intanq'].isnull(), 0, data_rawq['intanq'])
+data_rawq['qal'] = data_rawq['cheq'] + 0.75*(data_rawq['actq']-data_rawq['cheq']) + 0.5*(data_rawq['atq'] - data_rawq['actq'] - data_rawq['intanq'])
+data_rawq['mveqa'] = data_rawq['atq'] + data_rawq['mveq_f'] - data_rawq['ceqq']
+data_rawq['mveqa_1'] = data_rawq.groupby(['permno'])['mveqa'].shift(1)
+data_rawq['almq'] = data_rawq['qal']/data_rawq['mveqa_1']
 
 # Quarterly Accounting Variables
 chars_q = data_rawq[['gvkey', 'permno', 'datadate', 'jdate', 'sic', 'exchcd', 'shrcd', 'acc', 'bm', 'cfp',
