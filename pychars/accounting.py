@@ -68,7 +68,7 @@ comp = conn.raw_sql("""
                     f.dcpstk, f.pstk, f.ap, f.lco, f.lo, f.drc, f.drlt, f.txdi, f.dltis, f.dltr, f.dlcch,
                     
                     /*equity and other*/
-                    f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex,
+                    f.ceq, f.scstkc, f.emp, f.csho, f.seq, f.txditc, f.pstkrv, f.pstkl, f.np, f.txdc, f.dpc, f.ajex, f.epspx,
                     
                     /*market*/
                     abs(f.prcc_f) as prcc_f, abs(f.prcc_c) as prcc_c, f.dvc, f.prstkc, f.sstk, f.fopt, f.wcap, f.oancf
@@ -539,7 +539,16 @@ data_rawa['dfin'] = (data_rawa['ivst'] + data_rawa['ivao']) - (data_rawa['dltt']
 #Ta
 data_rawa['ta'] = data_rawa['dwc'] + data_rawa['dnco'] + data_rawa['dfin']
 
+#Ol
+data_rawa['ol'] = (data_rawa['cogs'] + data_rawa['xsga'])/data_rawa['at']
 
+#etr
+data_rawa['txtpi'] = data_rawa['txt'] / data_rawa['pi']
+data_rawa['txtpi_l1'] = data_rawa.groupby('permno')['txtpi'].shift(1)
+data_rawa['txtpi_l2'] = data_rawa.groupby('permno')['txtpi'].shift(2)
+data_rawa['txtpi_l3'] = data_rawa.groupby('permno')['txtpi'].shift(3)
+data_rawa['deps'] = data_rawa['epspx']/(data_rawa['ajex'] * data_rawa['prcc_f'])
+data_rawa['etr'] = (data_rawa['txtpi'] - (data_rawa['txtpi_l1'] + data_rawa['txtpi_l2'] + data_rawa['txtpi_l3'])/3) * data_rawa['deps']
 
 # Annual Accounting Variables
 chars_a = data_rawa[['cusip', 'ncusip', 'gvkey', 'permno', 'exchcd', 'shrcd', 'datadate', 'jdate', 'count',
