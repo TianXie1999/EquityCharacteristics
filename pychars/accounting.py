@@ -842,6 +842,10 @@ data_rawq['mveqa'] = data_rawq['atq'] + data_rawq['mveq_f'] - data_rawq['ceqq']
 data_rawq['mveqa_1'] = data_rawq.groupby(['permno'])['mveqa'].shift(1)
 data_rawq['almq'] = data_rawq['qal']/data_rawq['mveqa_1']
 
+#Olq
+data_rawa['olq'] = (data_rawa['cogsq'] + data_rawa['xsgaq'])/data_rawa['atq']
+
+
 # Quarterly Accounting Variables
 chars_q = data_rawq[['gvkey', 'permno', 'datadate', 'jdate', 'sic', 'exchcd', 'shrcd', 'acc', 'bm', 'cfp',
                      'ep', 'agr', 'ni', 'op', 'cash', 'chcsho', 'rd', 'cashdebt', 'pctacc', 'gma', 'lev',
@@ -861,6 +865,84 @@ crsp_mom = conn.raw_sql("""
 crsp_mom['permno'] = crsp_mom['permno'].astype(int)
 crsp_mom['jdate'] = pd.to_datetime(crsp_mom['date']) + MonthEnd(0)
 crsp_mom = crsp_mom.dropna()
+
+#Seasonality
+
+#Rla
+crsp_mom['rla'] = crsp_mom.groupby['permno']['ret'].shift(12)
+
+#Rln
+lag = pd.DataFrame()
+result = 0
+for i in range(1, 12):
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    result = result + lag['mom%s' % i]
+crsp_mom['rln'] = result/11
+
+#R[2,5]a
+#R[2,5]n
+lag = pd.DataFrame()
+result = 0
+for i in range(13,61):
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    if i not in [24,36,48,60]:
+        result = result + lag['mom%s' % i]
+
+crsp_mom['r25a'] = (lag['mom24']+lag['mom36']+lag['mom48']+lag['mom60'])/4
+crsp_mom['r25n'] = result/44
+
+#R[6,10]a
+#R[6,10]n
+lag = pd.DataFrame()
+result = 0
+for i in range(61,121):
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    if i not in [72,84,96,108,120]:
+        result = result + lag['mom%s' % i]
+
+crsp_mom['r610a'] = (lag['mom72']+lag['mom84']+lag['mom96']+lag['mom108']+lag['mom120'])/5
+crsp_mom['r610n'] = result/55
+
+#R[11,15]a
+lag = pd.DataFrame()
+result = 0
+for i in [132,144,156,168,180]:
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    result = result + lag['mom%s' % i]
+crsp_mom['r1115a'] = result/5
+
+#R[16,20]a
+lag = pd.DataFrame()
+result = 0
+for i in [192,204,216,228,240]:
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    result = result + lag['mom%s' % i]
+crsp_mom['r1620a'] = result/5
+
+#R[2,5]n
+lag = pd.DataFrame()
+result = 0
+for i in [24,36,48,60]:
+    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
+    result = result + lag['mom%s' % i]
+crsp_mom['rln'] = result/4
+
+
+def mom(start, end, df):
+    """
+
+    :param start: Order of starting lag
+    :param end: Order of ending lag
+    :param df: Dataframe
+    :return: Momentum factor
+    """
+    lag = pd.DataFrame()
+    result = 1
+    for i in range(start, end):
+        lag['mom%s' % i] = df.groupby(['permno'])['ret'].shift(i)
+        result = result * (1+lag['mom%s' % i])
+    result = result - 1
+    return result
 
 # add delisting return
 dlret = conn.raw_sql("""
