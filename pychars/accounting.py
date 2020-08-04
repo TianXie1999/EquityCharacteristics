@@ -747,6 +747,9 @@ data_rawq['lev'] = data_rawq['ltq']/data_rawq['me']
 # rdm
 data_rawq['rdm'] = data_rawq['xrdq4']/data_rawq['me']
 
+# rds
+data_rawq['rds'] = data_rawq['xrdq4']/data_rawq['saleq']
+
 # sgr
 data_rawq['saleq4'] = ttm4('saleq', data_rawq)
 data_rawq['saleq4'] = np.where(data_rawq['saleq4'].isnull(), data_rawq['saley'], data_rawq['saleq4'])
@@ -919,13 +922,6 @@ for i in [192,204,216,228,240]:
     result = result + lag['mom%s' % i]
 crsp_mom['r1620a'] = result/5
 
-#R[2,5]n
-lag = pd.DataFrame()
-result = 0
-for i in [24,36,48,60]:
-    lag['mom%s' % i] = crsp_mom.groupby(['permno'])['ret'].shift(i)
-    result = result + lag['mom%s' % i]
-crsp_mom['rln'] = result/4
 
 
 def mom(start, end, df):
