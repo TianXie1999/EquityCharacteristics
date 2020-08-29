@@ -23,19 +23,24 @@ import multiprocessing as mp
 conn = wrds.Connection()
 
 # CRSP Block. We use crsp.msf and ff.factors_monthly
-crsp = conn.raw_sql("""
-                      select a.permno, a.date, a.ret, (a.ret - b.rf) as exret, b.mktrf
-                      from crsp.msf as a
-                      left join ff.factors_monthly as b
-                      on a.date=b.date
+cr = conn.raw_sql("""
+                      select a.permno, a.date, a.ret from crsp.msf as a
                       where a.date >= '01/01/1959'
                       """)
 
-# sort variables by permno and date
-crsp = crsp.sort_values(by=['permno', 'date'])
+ff = conn.raw_sql("""
+                      select b.rf, b.mktrf, b.date from ff.factors_monthly as b
+                      where b.date >= '01/01/1959'
+                      """)
 
-# change variable format to int
+ff['date'] = pd.to_datetime(ff['date']) + MonthEnd(0)
+cr['date'] = pd.to_datetime(cr['date']) + MonthEnd(0)
+
+crsp = pd.merge(cr,ff,how = 'left', on = ['date'])
+crsp['exret'] = crsp['ret'] - crsp['rf']
+crsp = crsp.sort_values(by=['permno', 'date'])
 crsp['permno'] = crsp['permno'].astype(int)
+crsp = crsp[['permno','date','ret','exret','mktrf']]
 
 # create a firm list. Use reset_index to create a count to number companies without duplicates
 df_firm = crsp.drop_duplicates(['permno'])
@@ -44,11 +49,11 @@ df_firm['permno'] = df_firm['permno'].astype(int)
 df_firm = df_firm.reset_index(drop=True)
 df_firm = df_firm.reset_index()
 df_firm = df_firm.rename(columns={'index': 'count'})
-
+print(df_firm)
 #Extract number of data points for each permno
-crsp['monthcount'] = crsp.groupby('permno').cumcount()
-monthnum = crsp.groupby('permno')['monthcount'].tail(1)
-monthnum = monthnum.astype(int)
+crsp['month_count'] = crsp.groupby('permno').cumcount()
+month_num = crsp.groupby('permno')['month_count'].tail(1)
+month_num = month_num.astype(int)
 
 ######################
 # Calculate residual #
@@ -56,11 +61,6 @@ monthnum = monthnum.astype(int)
 
 
 def get_res_var(df, firm_list):
-    """
-    :param df: stock dataframe
-    :param firm_list: list of firms matching stock dataframe
-    :return: dataframe with variance of residual
-    """
     #for every permno, we have count as its number of obervations, prog as its number in firmlist
     for firm, count, prog in zip(firm_list['permno'], month_num, range(firm_list['permno'].count()+1)):
         prog = prog + 1
@@ -72,11 +72,12 @@ def get_res_var(df, firm_list):
             # Now we have temp as sixty month data
             temp = df[(df['permno'] == firm) & (i -59 <= df['month_count']) & (df['month_count'] <= i)]
             # if observations in last 3 months are less 21, we drop the rvar of this month
-            if temp['permno'].count() < 21:
+            if temp['permno'].count() < 20:
                 pass
             else:
                 rolling_window = temp['permno'].count()
                 index = temp.tail(1).index
+                print(index)
                 X = pd.DataFrame()
                 X[['mktrf']] = temp[['mktrf']]
                 X['intercept'] = 1
@@ -84,17 +85,12 @@ def get_res_var(df, firm_list):
                 X = np.mat(X)
                 Y = np.mat(temp[['exret']])
                 res = (np.identity(rolling_window) - X.dot(X.T.dot(X).I).dot(X.T)).dot(Y)
-                df.loc[index, 'res'] = res
+                #print(df)
+                df.loc[index, 'res'] = res[-1]
     return df
 
 
-    def sub_df(start, end, step):
-    """
-    :param start: the quantile to start cutting, usually it should be 0
-    :param end: the quantile to end cutting, usually it should be 1
-    :param step: quantile step
-    :return: a dictionary including all the 'firm_list' dataframe and 'stock data' dataframe
-    """
+def sub_df(start, end, step):
     # we use dict to store different sub dataframe
     temp = {}
     for i, h in zip(np.arange(start, end, step), range(int((end-start)/step))):
@@ -111,12 +107,6 @@ def get_res_var(df, firm_list):
     return temp
 
 def main(start, end, step):
-    """
-    :param start: the quantile to start cutting, usually it should be 0
-    :param end: the quantile to end cutting, usually it should be 1
-    :param step: quantile step
-    :return: a dataframe with calculated variance of residual
-    """
     df = sub_df(start, end, step)
     pool = mp.Pool()
     p_dict = {}
@@ -138,18 +128,13 @@ if __name__ == '__main__':
     crsp = main(0, 1, 0.05)
 
 # process dataframe
+print(crsp)
 crsp = crsp.dropna(subset=['res'])  # drop NA due to rolling
 crsp = crsp.rename(columns={'res': 'capm_1-1'})
 crsp = crsp.reset_index(drop=True)
 crsp = crsp[['permno', 'date', 'capm_1-1']]
 
 def mom(start, end, df):
-    """
-    :param start: Order of starting lag
-    :param end: Order of ending lag
-    :param df: Dataframe
-    :return: Momentum factor
-    """
     lag = pd.DataFrame()
     result = 1
     for i in range(start, end):
@@ -164,5 +149,8 @@ crsp['capm_13-60'] = mom(13,60,crsp)
 
 with open('rvar_capm_mom.pkl', 'wb') as f:
     pkl.dump(crsp, f)
+
+
+
 
 
