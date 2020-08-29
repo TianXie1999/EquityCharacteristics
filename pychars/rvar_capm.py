@@ -86,7 +86,7 @@ def get_res_var(df, firm_list):
             # if you want to change the rolling window, please change here: i - 2 means 3 months is a window.
             temp = df[(df['permno'] == firm) & (i - 2 <= df['month_count']) & (df['month_count'] <= i)]
             # if observations in last 3 months are less 21, we drop the rvar of this month
-            if temp['permno'].count() < 21:
+            if temp['permno'].count() < 20:
                 pass
             else:
                 rolling_window = temp['permno'].count()
@@ -129,7 +129,6 @@ def sub_df(start, end, step):
 
 def main(start, end, step):
     """
-
     :param start: the quantile to start cutting, usually it should be 0
     :param end: the quantile to end cutting, usually it should be 1
     :param step: quantile step
