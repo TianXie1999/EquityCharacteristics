@@ -137,7 +137,7 @@ def mom(start, end, df):
     lag = pd.DataFrame()
     result = 1
     for i in range(start, end):
-        lag['mom%s' % i] = df.groupby(['permno'])['capm_1-1'].shift(i)
+        lag['mom%s' % i] = df.groupby(['permno'])['rmom_capm_1m'].shift(i)
         result = result * (1+lag['mom%s' % i])
     result = result - 1
     return result
