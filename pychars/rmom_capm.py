@@ -128,11 +128,10 @@ if __name__ == '__main__':
     crsp = main(0, 1, 0.05)
 
 # process dataframe
-print(crsp)
 crsp = crsp.dropna(subset=['res'])  # drop NA due to rolling
-crsp = crsp.rename(columns={'res': 'capm_1-1'})
+crsp = crsp.rename(columns={'res': 'rmom_capm_1m'})
 crsp = crsp.reset_index(drop=True)
-crsp = crsp[['permno', 'date', 'capm_1-1']]
+crsp = crsp[['permno', 'date', 'rmom_capm_1m']]
 
 def mom(start, end, df):
     lag = pd.DataFrame()
@@ -144,10 +143,10 @@ def mom(start, end, df):
     return result
 
 
-crsp['capm_2-12'] = mom(1,12,crsp)
-crsp['capm_13-60'] = mom(12,60,crsp)
+crsp['rmom_capm_12m'] = mom(1,12,crsp)
+crsp['rmom_capm_60m'] = mom(12,60,crsp)
 
-with open('rvar_capm_mom.pkl', 'wb') as f:
+with open('rmom_capm.pkl', 'wb') as f:
     pkl.dump(crsp, f)
 
 
