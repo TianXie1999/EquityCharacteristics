@@ -49,7 +49,7 @@ df_firm['permno'] = df_firm['permno'].astype(int)
 df_firm = df_firm.reset_index(drop=True)
 df_firm = df_firm.reset_index()
 df_firm = df_firm.rename(columns={'index': 'count'})
-print(df_firm)
+
 #Extract number of data points for each permno
 crsp['month_count'] = crsp.groupby('permno').cumcount()
 month_num = crsp.groupby('permno')['month_count'].tail(1)
@@ -77,7 +77,7 @@ def get_res_var(df, firm_list):
             else:
                 rolling_window = temp['permno'].count()
                 index = temp.tail(1).index
-                print(index)
+              
                 X = pd.DataFrame()
                 X[['mktrf']] = temp[['mktrf']]
                 X['intercept'] = 1
@@ -144,8 +144,8 @@ def mom(start, end, df):
     return result
 
 
-crsp['capm_2-12'] = mom(2,12,crsp)
-crsp['capm_13-60'] = mom(13,60,crsp)
+crsp['capm_2-12'] = mom(1,12,crsp)
+crsp['capm_13-60'] = mom(12,60,crsp)
 
 with open('rvar_capm_mom.pkl', 'wb') as f:
     pkl.dump(crsp, f)
