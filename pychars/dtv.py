@@ -4,7 +4,9 @@ import datetime as dt
 import wrds
 from dateutil.relativedelta import *
 from pandas.tseries.offsets import *
+import datetime
 import pickle as pkl
+import multiprocessing as mp
 ###################
 # Connect to WRDS #
 ###################
@@ -81,7 +83,7 @@ def mom_1(start, end, df):
     lag = pd.DataFrame()
     result = 0
     for i in range(start, end):
-        lag['mom%s' % i] = df.groupby(['permno'])['dtvm'].shift(i)
+        lag['mom%s' % i] = df['dtvm'].shift(i)
         result = result + (lag['mom%s' % i])
     result = result/(end-start)
     return result
@@ -97,7 +99,7 @@ def mom_2(start, end, df):
     lag = pd.DataFrame()
     result = 0
     for i in range(start, end):
-        lag['mom%s' % i] = df.groupby(['permno'])['count'].shift(i)
+        lag['mom%s' % i] = df.groupby(['permno'])['day_count'].shift(i)
         result = result + (lag['mom%s' % i])
     result = result
     return result
@@ -114,20 +116,104 @@ dtv_m = crsp2.groupby(['permno','monthend'])[['dtv']].mean()
 dtv_m.rename(columns = {'dtv':'dtvm'})
 
 #record how many datapoints we have for a typical month
-dtv_m['month_count'] = crsp2.groupby(['permno','monthend'])[['dtv']].count()['dtv']
+dtv_m['day_count'] = crsp2.groupby(['permno','monthend'])[['dtv']].count()['dtv']
 dtv_m.reset_index()
 
 #Merge it back with crsp2 to only store monthly average data
 crsp3 = pd.merge(crsp2,dtv_m,how = 'inner', on = ['monthend','permno'])
 crsp3.drop(['dtv'],axis = 1)
-#Then calculate different dtvs
+
+#Generate firm list
+df_firm = crsp3.drop_duplicates(['permno'])
+df_firm = df_firm[['permno']]
+df_firm['permno'] = df_firm['permno'].astype(int)
+df_firm = df_firm.reset_index(drop=True)
+df_firm = df_firm.reset_index()
+df_firm = df_firm.rename(columns={'index': 'count'})
+
+#Extract number of data points for each permno
+crsp3['month_count'] = crsp3.groupby('permno').cumcount()
+month_num = crsp3.groupby('permno')['month_count'].tail(1)
+month_num = month_num.astype(int)
 
 #dtv
-crsp3['half_year_count'] =  mom_2(crsp3,0,6)
-crsp3['dtv'] = mom_1(crsp3,0,6)
-
+#crsp3['half_year_count'] =  mom_2(crsp3,0,6)
+#crsp3['dtv'] = mom_1(crsp3,0,6)
 #change the ones with less than 50 records to nan
-crsp3['dtv'] = np.where(crsp3['half_year_count']<50, np.nan, crsp3['dtv'])
+#crsp3['dtv'] = np.where(crsp3['half_year_count']<50, np.nan, crsp3['dtv'])
+
+
+def get_dtv(df, firm_list):
+    """
+    :param df: stock dataframe
+    :param firm_list: list of firms matching stock dataframe
+    :return: dataframe with variance of residual
+    """
+    for firm, count, prog in zip(firm_list['permno'], month_num, range(firm_list['permno'].count()+1)):
+        prog = prog + 1
+        print('processing permno %s' % firm, '/', 'finished', '%.2f%%' % ((prog/firm_list['permno'].count())*100))
+        for i in range(count + 1):
+            # if you want to change the rolling window, please change here: i - 2 means 3 months is a window.
+            temp = df[(df['permno'] == firm) & (i - 5 <= df['month_count']) & (df['month_count'] <= i)]
+            # if observations in last 3 months are less than 2 months, we drop the rvar of this month
+            if temp['permno'].count() < 2:
+                pass
+            else:
+                index = temp.tail(1).index
+                df.loc[index, 'dtv'] = mom_1(0,6,temp)
+    return df
+
+
+def sub_df(start, end, step):
+    """
+    :param start: the quantile to start cutting, usually it should be 0
+    :param end: the quantile to end cutting, usually it should be 1
+    :param step: quantile step
+    :return: a dictionary including all the 'firm_list' dataframe and 'stock data' dataframe
+    """
+    # we use dict to store different sub dataframe
+    temp = {}
+    for i, h in zip(np.arange(start, end, step), range(int((end-start)/step))):
+        print('processing splitting dataframe:', round(i, 2), 'to', round(i + step, 2))
+        if i == 0:  # to get the left point
+            temp['firm' + str(h)] = df_firm[df_firm['count'] <= df_firm['count'].quantile(i + step)]
+            temp['cr' + str(h)] = pd.merge(crsp3, temp['firm' + str(h)], how='left',
+                                             on='permno').dropna(subset=['count'])
+        else:
+            temp['firm' + str(h)] = df_firm[(df_firm['count'].quantile(i) < df_firm['count']) & (
+                    df_firm['count'] <= df_firm['count'].quantile(i + step))]
+            temp['cr' + str(h)] = pd.merge(crsp3, temp['firm' + str(h)], how='left',
+                                             on='permno').dropna(subset=['count'])
+    return temp
+
+def main(start, end, step):
+    """
+
+    :param start: the quantile to start cutting, usually it should be 0
+    :param end: the quantile to end cutting, usually it should be 1
+    :param step: quantile step
+    :return: a dataframe with calculated variance of residual
+    """
+    df = sub_df(start, end, step)
+    pool = mp.Pool()
+    p_dict = {}
+    for i in range(int((end-start)/step)):
+        p_dict['p' + str(i)] = pool.apply_async(get_dtv, (df['cr%s' % i], df['firm%s' % i],))
+    pool.close()
+    pool.join()
+    result = pd.DataFrame()
+    print('processing pd.concat')
+    for h in range(int((end-start)/step)):
+        result = pd.concat([result, p_dict['p%s' % h].get()])
+    return result
+
+if __name__ == '__main__':
+    crsp3 = main(0, 1, 0.05)
+
+crsp3 = crsp3.dropna(subset=['dtv'])  # drop NA due to rolling
+crsp3 = crsp3.reset_index(drop=True)
+crsp3 = crsp3[['permno', 'date', 'dtv']]
+
 
 with open('dtv.pkl', 'wb') as f:
     pkl.dump(crsp3, f)
