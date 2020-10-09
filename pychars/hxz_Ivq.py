@@ -29,7 +29,7 @@ crsp = conn.raw_sql("""
                       where date >= '01/03/1967'
                       """)
 
-
+#Download data from http://global-q.org/factors.html
 qmodel = pd.read_csv("q5_factors_daily_2019a.csv")
 
 # sort variables by permno and date
@@ -43,9 +43,8 @@ crsp['permno'] = crsp['permno'].astype(int)
 crsp['date'] = pd.to_datetime(crsp['date'])
 qmodel.rename(columns = {'DATE':'date'}, inplace = True)
 qmodel['date'] = pd.to_datetime(qmodel['date'],format='%Y%m%d', errors='ignore')
-print(qmodel)
 crsp = pd.merge(crsp,qmodel,how = 'inner', on = ['date'])
-print(crsp)
+
 
 # find the closest trading day to the end of the month
 crsp['monthend'] = crsp['date'] + MonthEnd(0)
